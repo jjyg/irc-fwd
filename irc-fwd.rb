@@ -144,9 +144,11 @@ class IrcFwd
 		when '433'	# nick already in use
 			sendl_ts 'nick', "#{@nick}_#{rand(1000)}"
 		when 'PRIVMSG'
-			if false and parts.last =~ /^!say (.*)$/
+			if parts.last =~ /^!send (.*)$/
+				msg = $1
 				# reverse proxy: send msg to 'from' server (same chan)
-				sendl_fs 'privmsg', parts[2], "<#{parts[0].to_s.sub(/!.*/, '')}> #{parts[3]}"
+				sendl_fs 'privmsg', parts[2], ":<#{parts[0].to_s.sub(/!.*/, '')}> #{msg}"
+				sendl_ts 'privmsg', parts[2], ":<#{parts[0].to_s.sub(/!.*/, '')}> #{msg}"
 			end
 
 			if parts[0] =~ /^#{ADMIN_NICK}!/
