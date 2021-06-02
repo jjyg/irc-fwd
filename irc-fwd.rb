@@ -30,8 +30,12 @@ class IrcFwd
 		s
 	end
 
+	def verb(s)
+		puts "#{Time.now.strftime("%Y%m%d %H%M%S")} #{s}" if $VERBOSE
+	end
+
 	def sendl_fs(*a)
-		puts "f > #{a.inspect}" if $VERBOSE
+		verb "f > #{a.inspect}"
 		@fs.write a.join(' ') + "\r\n"
 	rescue
 		puts "f error #$!"
@@ -40,7 +44,7 @@ class IrcFwd
 	end
 
 	def sendl_ts(*a)
-		puts "t > #{a.inspect}" if $VERBOSE
+		verb "t > #{a.inspect}"
 		@ts.write a.join(' ') + "\r\n"
 	rescue
 		puts "t error #$!"
@@ -82,14 +86,14 @@ class IrcFwd
 
 	def connect_from
 		@fs = ssl_connect(@fromhost, @fromport)
-		puts "f = connect #{@fromhost} #{@fromport}" if $VERBOSE
+		verb "f = connect #{@fromhost} #{@fromport}"
 		sendl_fs 'user', @nick, @nick, @nick, @nick
 		sendl_fs 'nick', @nick
 	end
 
 	def connect_to
 		@ts = ssl_connect(@tohost, @toport)
-		puts "t = connect #{@tohost} #{@toport}" if $VERBOSE
+		verb "t = connect #{@tohost} #{@toport}"
 		sendl_ts 'user', @nick, @nick, @nick, @nick
 		sendl_ts 'nick', @nick
 	end
@@ -189,12 +193,12 @@ class IrcFwd
 
 		if fds and fds.include?(@ts) and l = to_gets
 			parts = parse_irc_line(l)
-			puts "t < #{parts.inspect}" if $VERBOSE
+			verb "t < #{parts.inspect}"
 			handle_to(parts)
 		end
 		if fds and fds.include?(@fs) and l = from_gets
 			parts = parse_irc_line(l)
-			puts "f < #{parts.inspect}" if $VERBOSE
+			verb "f < #{parts.inspect}"
 			handle_from(parts)
 		end
 		
@@ -209,14 +213,26 @@ class IrcFwd
 			2
 		else
 			# 0.7 gets throttled on libera
-			0.8
+			tn = Time.now
+			@last_queue_send ||= tn - 1
+			nt = @last_queue_send + 0.8
+			if nt - tn > 0.01 and nt - tn < 0.8
+				nt - tn
+			else
+				0.8
+			end
 		end
 	end
 
 	def main_send
 		if @queue.first
-			dst, msg = @queue.shift
-			sendl_ts 'privmsg', dst, ":#{msg}"
+			tn = Time.now
+			@last_queue_send ||= tn - 1
+			if tn - @last_queue_send >= 0.8
+				@last_queue_send = tn
+				dst, msg = @queue.shift
+				sendl_ts 'privmsg', dst, ":#{msg}"
+			end
 		else
 			@to_last_ping ||= 0
 			if @to_last_ping < Time.now.to_i - 15*60
