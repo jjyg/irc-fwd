@@ -67,11 +67,15 @@ class IrcFwd
 
 	def s_gets(fd, buf)
 		while fd.pending > 0 or IO.select([fd], nil, nil, 0)
-			buf << fd.read(1)
-			if buf[-1, 1] == "\n"
-				l = buf.chomp
+			case c = fd.read(1)
+			when nil
+				return
+			when "\n"
+				l = buf + c
 				buf.replace ''
 				return l
+			else
+				buf << c
 			end
 		end
 	end
