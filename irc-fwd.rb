@@ -30,15 +30,19 @@ class IrcFwd
 		s
 	end
 
+	def ts(s)
+		"#{Time.now.strftime("%Y%m%d %H%M%S")} #{s}"
+	end
+
 	def verb(s)
-		puts "#{Time.now.strftime("%Y%m%d %H%M%S")} #{s}" if $VERBOSE
+		puts ts(s) if $VERBOSE
 	end
 
 	def sendl_fs(*a)
 		verb "f > #{a.inspect}"
 		@fs.write a.join(' ') + "\r\n"
 	rescue
-		puts "f error #$!"
+		puts ts("f error #$!")
 		sleep 5
 		connect_from
 	end
@@ -47,7 +51,7 @@ class IrcFwd
 		verb "t > #{a.inspect}"
 		@ts.write a.join(' ') + "\r\n"
 	rescue
-		puts "t error #$!"
+		puts ts("t error #$!")
 		sleep 5
 		connect_to
 	end
@@ -210,7 +214,7 @@ class IrcFwd
 		
 		main_send
 	rescue
-		puts "Exception: #{$!.class} #$!", $!.backtrace
+		puts ts("Exception: #{$!.class} #$!"), $!.backtrace
 		sleep 1
 	end
 
